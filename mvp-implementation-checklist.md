@@ -54,36 +54,36 @@ This checklist is based on the [MVP Implementation Guide](./documentation/mvp-im
 ## Phase 2: Service Layer Implementation
 
 ### Step 2.1: Create Supabase Client Instance
-- [ ] Create file `src/lib/supabase.js`
-- [ ] Copy code from MVP Implementation Guide (Phase 2, Step 2.1)
-- [ ] Verify environment variables are loaded correctly
+- [x] Create file `src/lib/supabase.js`
+- [x] Copy code from MVP Implementation Guide (Phase 2, Step 2.1)
+- [x] Verify environment variables are loaded correctly
 
 ### Step 2.2: Create Service Layer File
-- [ ] Create file `src/lib/services.js`
-- [ ] Copy all service implementations from MVP Implementation Guide (Phase 2, Step 2.2):
-  - [ ] `userService` (register, login, getUserById)
-  - [ ] `lineaService` (getAll, getById, create, getStopsByLine)
-  - [ ] `paradaService` (getAll, getById, create, addToRoute)
-  - [ ] `unidadService` (getAll, getActive, getByLine, getById, create, assignDriver)
-  - [ ] `posicionService` (updatePosition, getCurrentPosition, getAllCurrentPositions, getHistoricalPositions)
-  - [ ] `favoritosService` (getUserFavorites, addFavorite, removeFavorite)
-- [ ] Add `updateActiveStatus` method to `unidadService` (from Phase 3, Step 3.1 note)
+- [x] Create file `src/lib/services.js`
+- [x] Copy all service implementations from MVP Implementation Guide (Phase 2, Step 2.2):
+  - [x] `userService` (register, login, getUserById)
+  - [x] `lineaService` (getAll, getById, create, getStopsByLine)
+  - [x] `paradaService` (getAll, getById, create, addToRoute)
+  - [x] `unidadService` (getAll, getActive, getByLine, getById, create, assignDriver)
+  - [x] `posicionService` (updatePosition, getCurrentPosition, getAllCurrentPositions, getHistoricalPositions)
+  - [x] `favoritosService` (getUserFavorites, addFavorite, removeFavorite)
+- [x] Add `updateActiveStatus` method to `unidadService` (from Phase 3, Step 3.1 note)
 
 ---
 
 ## Phase 3: Frontend Integration
 
 ### Step 3.1: Update API Layer to Use Services
-- [ ] Update `src/lib/api.ts` to use service layer
-- [ ] Copy mapping functions from MVP Implementation Guide (Phase 3, Step 3.1):
-  - [ ] `mapUnidadToBus`
-  - [ ] `mapLineaToBusRoute`
-  - [ ] `mapParadaToBusStop`
-- [ ] Update API functions:
-  - [ ] `busApi` (getAll, getActive, getByRoute, create, updateLocation)
-  - [ ] `routeApi` (getAll, create)
-  - [ ] `busStopApi` (getAll, getByRoute, create)
-  - [ ] `arrivalApi` (getForStop)
+- [x] Update `src/lib/api.ts` to use service layer
+- [x] Copy mapping functions from MVP Implementation Guide (Phase 3, Step 3.1):
+  - [x] `mapUnidadToBus`
+  - [x] `mapLineaToBusRoute`
+  - [x] `mapParadaToBusStop`
+- [x] Update API functions:
+  - [x] `busApi` (getAll, getActive, getByRoute, create, updateLocation)
+  - [x] `routeApi` (getAll, create)
+  - [x] `busStopApi` (getAll, getByRoute, create)
+  - [x] `arrivalApi` (getForStop)
 
 ### Step 3.2: Update Environment Configuration
 - [ ] Ensure `.env` file is in project root

@@ -4,10 +4,13 @@ A real-time bus tracking application for Isla de Margarita, built with React, Ty
 
 ## Features
 
-- 🚌 Real-time bus location tracking
+- 🚌 **Public Access**: Real-time bus location tracking and map view (no login required)
 - 🗺️ Interactive map with OpenStreetMap integration
-- 👥 Passenger and Driver views
-- 📍 Bus stops and routes management
+- 👥 **Authenticated Features**: Multiple user roles with different permissions
+  - **Passenger**: Add favorite stops to your account
+  - **Driver**: Update bus location and status in real-time
+  - **Admin**: Manage bus stops (create, update, delete)
+- ⭐ Passenger favorites system (requires login)
 - 🌓 Dark/Light theme support
 
 ## Prerequisites
@@ -121,12 +124,42 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
+## Public vs Authenticated Features
+
+### Public Access (No Login Required)
+- ✅ View real-time bus locations on the map
+- ✅ See all bus stops and routes
+- ✅ Track nearby bus stops
+- ✅ View bus arrival information
+
+### Authenticated Features (Login Required)
+
+The application supports three user roles with different permissions:
+
+- **Admin (`admin`)**: 
+  - Can create, update, and delete bus stops
+  - Has access to the admin interface for managing the bus stop database
+  
+- **Driver (`conductor`)**: 
+  - Can update their bus location and status
+  - Has access to the driver view for real-time position updates
+  
+- **Passenger (`pasajero`)**: 
+  - Can add favorite stops to their account
+  - Can save frequently used stops for quick access
+
+## Authentication
+
+The application includes a login system for accessing authenticated features. Users can click the "Iniciar Sesión" button in the header to log in with their email and password. The user's role determines which interface and permissions they have access to.
+
+**Note**: To use authenticated features, you need to have users created in the Supabase database with the appropriate roles.
+
 ## Next Steps
 
 Follow the [MVP Implementation Checklist](./mvp-implementation-checklist.md) to:
 1. Set up Supabase database
 2. Migrate from in-memory to database storage
-3. Implement authentication
+3. Implement authentication (✅ Completed)
 4. Add real-time features
 
 ## License

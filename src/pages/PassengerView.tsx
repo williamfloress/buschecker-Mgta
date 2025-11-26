@@ -1,13 +1,26 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MapPin, RefreshCw } from "lucide-react";
+import { MapPin, RefreshCw, Star, LogIn } from "lucide-react";
 import MapView from "@/components/MapView";
 import BusArrivalCard from "@/components/BusArrivalCard";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { busApi, busStopApi } from "@/lib/localStorageApi";
+import { favoritosService } from "@/lib/services";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { Bus, BusStop } from "@shared/schema";
 
 export default function PassengerView() {
+  const { user, isPassenger } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [nearbyStopIds, setNearbyStopIds] = useState<string[]>([]);
@@ -24,6 +37,74 @@ export default function PassengerView() {
     queryKey: ['bus-stops'],
     queryFn: busStopApi.getAll,
   });
+
+  // Fetch user favorites (only if authenticated)
+  const { data: favorites = [] } = useQuery({
+    queryKey: ['favorites', user?.id_usuario],
+    queryFn: () => favoritosService.getUserFavorites(user!.id_usuario),
+    enabled: !!user && isPassenger,
+  });
+
+  // Add favorite mutation
+  const addFavoriteMutation = useMutation({
+    mutationFn: ({ tipoFavorito, idReferencia }: { tipoFavorito: 'parada' | 'linea'; idReferencia: string }) =>
+      favoritosService.addFavorite(user!.id_usuario, tipoFavorito, idReferencia),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id_usuario] });
+      toast({
+        title: "Favorito agregado",
+        description: "La parada se ha agregado a tus favoritos.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo agregar el favorito.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove favorite mutation
+  const removeFavoriteMutation = useMutation({
+    mutationFn: (favoritoId: string) => favoritosService.removeFavorite(favoritoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites', user?.id_usuario] });
+      toast({
+        title: "Favorito eliminado",
+        description: "La parada se ha eliminado de tus favoritos.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar el favorito.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isFavorite = (stopId: string) => {
+    return favorites.some((fav: any) => fav.tipo_favorito === 'parada' && fav.id_referencia === stopId);
+  };
+
+  const handleToggleFavorite = (stopId: string) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Debes iniciar sesión para agregar favoritos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const favorite = favorites.find((fav: any) => fav.tipo_favorito === 'parada' && fav.id_referencia === stopId);
+    if (favorite) {
+      removeFavoriteMutation.mutate(favorite.id_favorito);
+    } else {
+      addFavoriteMutation.mutate({ tipoFavorito: 'parada', idReferencia: stopId });
+    }
+  };
 
   // Create mock arrival data for demo
   const arrivalsData = nearbyStopIds.map(stopId => {
@@ -167,37 +248,135 @@ export default function PassengerView() {
         </div>
       </div>
 
-      {/* Arrivals Section */}
+      {/* Sidebar Section */}
       <div className="w-full lg:w-80 space-y-4 overflow-y-auto max-h-[600px] lg:max-h-full">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold" data-testid="text-nearby-stops">
-            Paradas Cercanas
-          </h2>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => console.log('Refresh arrivals')}
-            data-testid="button-refresh-arrivals"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-        
-        {arrivalsData.map((stopData, index) => (
-          <BusArrivalCard
-            key={`${stopData.stopName}-${index}`}
-            stopName={stopData.stopName}
-            arrivals={stopData.arrivals}
-          />
-        ))}
-        
-        {arrivalsData.length === 0 && nearbyStopIds.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground" data-testid="text-no-nearby-stops">
-            <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No se encontraron paradas cercanas</p>
-            <p className="text-xs">Acércate más a una ruta de autobús</p>
-          </div>
+        {/* Favorites Section (Authenticated Only) */}
+        {user && isPassenger && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Mis Favoritos
+              </CardTitle>
+              <CardDescription>
+                Paradas guardadas para acceso rápido
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {favorites.filter((fav: any) => fav.tipo_favorito === 'parada').length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No tienes paradas favoritas aún
+                </p>
+              ) : (
+                favorites
+                  .filter((fav: any) => fav.tipo_favorito === 'parada')
+                  .map((fav: any) => {
+                    const stop = busStops.find((s) => s.id === fav.id_referencia);
+                    if (!stop) return null;
+                    return (
+                      <div
+                        key={fav.id_favorito}
+                        className="flex items-center justify-between p-2 border rounded-md hover:bg-muted"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{stop.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleFavorite(stop.id)}
+                          className="text-yellow-500 hover:text-yellow-600"
+                        >
+                          <Star className="w-4 h-4 fill-current" />
+                        </Button>
+                      </div>
+                    );
+                  })
+              )}
+            </CardContent>
+          </Card>
         )}
+
+        {/* Login Prompt for Favorites (Not Authenticated) */}
+        {!user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Favoritos
+              </CardTitle>
+              <CardDescription>
+                Guarda tus paradas favoritas para acceso rápido
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-4 space-y-3">
+                <LogIn className="w-8 h-8 mx-auto text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Inicia sesión para guardar paradas favoritas
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Nearby Stops Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold" data-testid="text-nearby-stops">
+              Paradas Cercanas
+            </h2>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['buses', 'active'] });
+                queryClient.invalidateQueries({ queryKey: ['bus-stops'] });
+              }}
+              data-testid="button-refresh-arrivals"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          {arrivalsData.map((stopData, index) => {
+            const stop = busStops.find(s => s.name === stopData.stopName);
+            const isFav = stop ? isFavorite(stop.id) : false;
+            
+            return (
+              <div key={`${stopData.stopName}-${index}`} className="relative">
+                <BusArrivalCard
+                  stopName={stopData.stopName}
+                  arrivals={stopData.arrivals}
+                />
+                {stop && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => handleToggleFavorite(stop.id)}
+                    title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                  >
+                    <Star 
+                      className={`w-4 h-4 ${isFav ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}`} 
+                    />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+          
+          {arrivalsData.length === 0 && nearbyStopIds.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground" data-testid="text-no-nearby-stops">
+              <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No se encontraron paradas cercanas</p>
+              <p className="text-xs">Acércate más a una ruta de autobús</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
