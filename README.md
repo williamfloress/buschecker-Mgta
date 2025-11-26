@@ -1,104 +1,104 @@
-# BusTracker - Real-time Bus Tracking Application
+# BusTracker - Aplicación de Seguimiento de Autobuses en Tiempo Real
 
-A real-time bus tracking application for Isla de Margarita, built with React, TypeScript, Express, and Vite.
+Una aplicación de seguimiento de autobuses en tiempo real para Isla de Margarita, construida con React, TypeScript, Express y Vite.
 
-## Features
+## Características
 
-- 🚌 **Public Access**: Real-time bus location tracking and map view (no login required)
-- 🗺️ Interactive map with OpenStreetMap integration
-- 👥 **Authenticated Features**: Multiple user roles with different permissions
-  - **Passenger**: Add favorite stops to your account
-  - **Driver**: Update bus location and status in real-time
-  - **Admin**: Manage bus stops (create, update, delete)
-- ⭐ Passenger favorites system (requires login)
-- 🌓 Dark/Light theme support
+- 🚌 **Acceso Público**: Seguimiento de ubicación de autobuses en tiempo real y vista de mapa (no requiere inicio de sesión)
+- 🗺️ Mapa interactivo con integración de OpenStreetMap
+- 👥 **Funciones Autenticadas**: Múltiples roles de usuario con diferentes permisos
+  - **Pasajero**: Agregar paradas favoritas a tu cuenta
+  - **Conductor**: Actualizar ubicación y estado del autobús en tiempo real
+  - **Administrador**: Gestionar paradas de autobús (crear, actualizar, eliminar)
+- ⭐ Sistema de favoritos para pasajeros (requiere inicio de sesión)
+- 🌓 Soporte para tema oscuro/claro
 
-## Prerequisites
+## Requisitos Previos
 
-- Node.js (v18 or higher)
-- npm (comes with Node.js)
-- cross-env (already installed as dev dependency)
+- Node.js (v18 o superior)
+- npm (incluido con Node.js)
+- cross-env (ya instalado como dependencia de desarrollo)
 
-## Getting Started
+## Comenzando
 
-### 1. Install Dependencies
+### 1. Instalar Dependencias
 
-If you haven't already installed dependencies:
+Si aún no has instalado las dependencias:
 
 ```bash
 npm install
 ```
 
-### 2. Run the Development Server
+### 2. Ejecutar el Servidor de Desarrollo
 
-Start the development server (runs both frontend and backend):
+Inicia el servidor de desarrollo (ejecuta tanto el frontend como el backend):
 
 ```bash
 npm run dev
 ```
 
-The application will start on **port 5000** by default.
+La aplicación se iniciará en el **puerto 5000** por defecto.
 
-### 3. Access the Application
+### 3. Acceder a la Aplicación
 
-Open your browser and navigate to:
+Abre tu navegador y navega a:
 
 ```
 http://localhost:5000
 ```
 
-## Available Scripts
+## Scripts Disponibles
 
-- **`npm run dev`** - Start development server (runs on port 5000)
-- **`npm run build`** - Build the application for production
-- **`npm run start`** - Start production server (requires build first)
-- **`npm run check`** - Type-check TypeScript files
-- **`npm run db:push`** - Push database schema changes (when using Supabase)
+- **`npm run dev`** - Iniciar servidor de desarrollo (se ejecuta en el puerto 5000)
+- **`npm run build`** - Construir la aplicación para producción
+- **`npm run start`** - Iniciar servidor de producción (requiere construcción previa)
+- **`npm run check`** - Verificar tipos de archivos TypeScript
+- **`npm run db:push`** - Enviar cambios de esquema de base de datos (cuando se usa Supabase)
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 buschecker-mgta/
-├── server/          # Express backend server
-│   ├── index.ts     # Server entry point
-│   ├── routes.ts    # API routes
-│   ├── storage.ts   # In-memory storage (with sample data)
-│   └── vite.ts      # Vite integration for frontend
-├── src/             # React frontend application
-│   ├── components/  # React components
-│   ├── pages/       # Page components (DriverView, PassengerView)
-│   └── lib/         # Utilities and API client
-├── shared/          # Shared TypeScript schemas
-└── documentation/   # Project documentation
+├── server/          # Servidor backend Express
+│   ├── index.ts     # Punto de entrada del servidor
+│   ├── routes.ts    # Rutas de API
+│   ├── storage.ts   # Almacenamiento en memoria (con datos de ejemplo)
+│   └── vite.ts      # Integración de Vite para frontend
+├── src/             # Aplicación frontend React
+│   ├── components/  # Componentes React
+│   ├── pages/       # Componentes de página (DriverView, PassengerView)
+│   └── lib/         # Utilidades y cliente API
+├── shared/          # Esquemas TypeScript compartidos
+└── documentation/   # Documentación del proyecto
 
 ```
 
-## Current Setup
+## Configuración Actual
 
-- **Storage**: Currently using in-memory storage with sample data (Isla de Margarita bus routes)
-- **Port**: Defaults to 5000 (can be changed via `PORT` environment variable)
-- **Database**: Will be migrated to Supabase in Phase 1 of MVP implementation
+- **Almacenamiento**: Actualmente usando almacenamiento en memoria con datos de ejemplo (rutas de autobús de Isla de Margarita)
+- **Puerto**: Por defecto 5000 (puede cambiarse mediante la variable de entorno `PORT`)
+- **Base de Datos**: Se migrará a Supabase en la Fase 1 de la implementación del MVP
 
-## Sample Data
+## Datos de Ejemplo
 
-The application comes pre-loaded with sample data:
-- 5 bus routes (RA-1 through RA-5)
-- Multiple bus stops for each route
-- 6 buses with assigned drivers
-- Locations based on Isla de Margarita, Venezuela
+La aplicación viene precargada con datos de ejemplo:
+- 5 rutas de autobús (RA-1 a RA-5)
+- Múltiples paradas de autobús para cada ruta
+- 6 autobuses con conductores asignados
+- Ubicaciones basadas en Isla de Margarita, Venezuela
 
-## Development Mode
+## Modo de Desarrollo
 
-In development mode, the server:
-- Serves the React frontend via Vite with hot module replacement (HMR)
-- Provides REST API endpoints at `/api/*`
-- Uses in-memory storage (data resets on server restart)
+En modo de desarrollo, el servidor:
+- Sirve el frontend de React a través de Vite con recarga de módulos en caliente (HMR)
+- Proporciona endpoints REST API en `/api/*`
+- Usa almacenamiento en memoria (los datos se reinician al reiniciar el servidor)
 
-## Troubleshooting
+## Solución de Problemas
 
-### Port Already in Use
+### Puerto Ya en Uso
 
-If port 5000 is already in use, set a different port:
+Si el puerto 5000 ya está en uso, configura un puerto diferente:
 
 **Windows PowerShell:**
 ```powershell
@@ -115,54 +115,53 @@ set PORT=3000 && npm run dev
 PORT=3000 npm run dev
 ```
 
-### Dependencies Issues
+### Problemas con Dependencias
 
-If you encounter dependency issues:
+Si encuentras problemas con las dependencias:
 
 ```bash
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-## Public vs Authenticated Features
+## Funciones Públicas vs Autenticadas
 
-### Public Access (No Login Required)
-- ✅ View real-time bus locations on the map
-- ✅ See all bus stops and routes
-- ✅ Track nearby bus stops
-- ✅ View bus arrival information
+### Acceso Público (No Requiere Inicio de Sesión)
+- ✅ Ver ubicaciones de autobuses en tiempo real en el mapa
+- ✅ Ver todas las paradas de autobús y rutas
+- ✅ Rastrear paradas de autobús cercanas
+- ✅ Ver información de llegada de autobuses
 
-### Authenticated Features (Login Required)
+### Funciones Autenticadas (Requiere Inicio de Sesión)
 
-The application supports three user roles with different permissions:
+La aplicación admite tres roles de usuario con diferentes permisos:
 
-- **Admin (`admin`)**: 
-  - Can create, update, and delete bus stops
-  - Has access to the admin interface for managing the bus stop database
+- **Administrador (`admin`)**: 
+  - Puede crear, actualizar y eliminar paradas de autobús
+  - Tiene acceso a la interfaz de administración para gestionar la base de datos de paradas de autobús
   
-- **Driver (`conductor`)**: 
-  - Can update their bus location and status
-  - Has access to the driver view for real-time position updates
+- **Conductor (`conductor`)**: 
+  - Puede actualizar la ubicación y estado de su autobús
+  - Tiene acceso a la vista del conductor para actualizaciones de posición en tiempo real
   
-- **Passenger (`pasajero`)**: 
-  - Can add favorite stops to their account
-  - Can save frequently used stops for quick access
+- **Pasajero (`pasajero`)**: 
+  - Puede agregar paradas favoritas a su cuenta
+  - Puede guardar paradas frecuentemente usadas para acceso rápido
 
-## Authentication
+## Autenticación
 
-The application includes a login system for accessing authenticated features. Users can click the "Iniciar Sesión" button in the header to log in with their email and password. The user's role determines which interface and permissions they have access to.
+La aplicación incluye un sistema de inicio de sesión para acceder a funciones autenticadas. Los usuarios pueden hacer clic en el botón "Iniciar Sesión" en el encabezado para iniciar sesión con su correo electrónico y contraseña. El rol del usuario determina qué interfaz y permisos tiene acceso.
 
-**Note**: To use authenticated features, you need to have users created in the Supabase database with the appropriate roles.
+**Nota**: Para usar funciones autenticadas, necesitas tener usuarios creados en la base de datos de Supabase con los roles apropiados.
 
-## Next Steps
+## Próximos Pasos
 
-Follow the [MVP Implementation Checklist](./mvp-implementation-checklist.md) to:
-1. Set up Supabase database
-2. Migrate from in-memory to database storage
-3. Implement authentication (✅ Completed)
-4. Add real-time features
+Sigue la [Lista de Verificación de Implementación MVP](./mvp-implementation-checklist.md) para:
+1. Configurar la base de datos de Supabase
+2. Migrar de almacenamiento en memoria a almacenamiento en base de datos
+3. Implementar autenticación (✅ Completado)
+4. Agregar funciones en tiempo real
 
-## License
+## Licencia
 
 MIT
-
