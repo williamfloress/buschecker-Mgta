@@ -1,0 +1,197 @@
+import { useState, useEffect } from "react";
+import MapView from "@/components/MapView";
+import DriverControls from "@/components/DriverControls";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { busApi, busStopApi, routeApi } from "@/lib/localStorageApi";
+import type { Bus, BusStop, BusRoute } from "@shared/schema";
+import { RefreshCw } from "lucide-react";
+
+export default function DriverView() {
+  const queryClient = useQueryClient();
+  const [driverBusId, setDriverBusId] = useState<string>(''); // Will be set when driver "logs in"
+  
+  // For demo purposes, create or get the current driver's bus
+  useEffect(() => {
+    // Simulate getting the current driver's bus ID from localStorage or auth
+    const savedDriverBusId = localStorage.getItem('driverBusId');
+    if (savedDriverBusId) {
+      setDriverBusId(savedDriverBusId);
+    } else {
+      // Create a new driver bus for demo
+      busApi.create({
+        routeId: 'RA-1', // Default to first route
+        driverName: 'Current Driver',
+        latitude: 11.0041, // Isla de Margarita coordinates
+        longitude: -63.8497,
+        isActive: false
+      }).then(newBus => {
+        // Use the created bus ID as the driver ID
+        setDriverBusId(newBus.id);
+        localStorage.setItem('driverBusId', newBus.id);
+      });
+    }
+  }, []);
+
+  // Fetch all buses
+  const { data: allBuses = [], isLoading: busesLoading } = useQuery({
+    queryKey: ['buses'],
+    queryFn: busApi.getAll,
+    refetchInterval: 15000, // Refresh every 15 seconds
+  });
+
+  // Fetch all bus stops
+  const { data: busStops = [], isLoading: stopsLoading } = useQuery({
+    queryKey: ['bus-stops'],
+    queryFn: busStopApi.getAll,
+  });
+
+  // Fetch all routes
+  const { data: routes = [], isLoading: routesLoading } = useQuery({
+    queryKey: ['routes'],
+    queryFn: routeApi.getAll,
+  });
+
+  // Find the current driver's bus
+  const driverBus = allBuses.find(bus => bus.id === driverBusId) || {
+    id: driverBusId,
+    routeId: '',
+    driverName: 'Current Driver',
+    latitude: 11.0041,
+    longitude: -63.8497,
+    isActive: false,
+    lastUpdate: new Date(),
+  } as Bus;
+  
+  // Other buses (excluding driver's bus)
+  const otherBuses = allBuses.filter(bus => bus.id !== driverBusId);
+  
+  // Mutation for updating bus location using localStorage
+  const updateLocationMutation = useMutation({
+    mutationFn: ({ latitude, longitude, isActive }: { latitude: number; longitude: number; isActive?: boolean }) => 
+      busApi.updateLocation(driverBusId, latitude, longitude, isActive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['buses'] });
+    },
+  });
+
+  const handleStatusChange = (isActive: boolean) => {
+    console.log('Driver status changed to:', isActive);
+    console.log('Current driverBusId for status change:', driverBusId);
+    
+    if (driverBusId) {
+      updateLocationMutation.mutate({ 
+        latitude: driverBus.latitude, 
+        longitude: driverBus.longitude, 
+        isActive 
+      });
+    } else {
+      console.log('Cannot update status: driverBusId not ready yet');
+    }
+  };
+
+  const handleRouteChange = (routeId: string) => {
+    console.log('Driver route changed to:', routeId);
+    console.log('Current driverBusId for route change:', driverBusId);
+    
+    if (driverBusId) {
+      // Update the bus route in localStorage
+      busApi.update(driverBusId, { routeId })
+        .then(() => {
+          console.log('Route update successful');
+          queryClient.invalidateQueries({ queryKey: ['buses'] });
+        })
+        .catch(error => {
+          console.error('Failed to update route:', error);
+        });
+    } else {
+      console.log('Cannot update route: driverBusId not ready yet');
+    }
+  };
+
+  const handleLocationUpdate = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log('Driver location updated:', latitude, longitude);
+          updateLocationMutation.mutate({ 
+            latitude, 
+            longitude, 
+            isActive: driverBus.isActive 
+          });
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          // Simulate location update for demo
+          const randomLat = 11.0041 + (Math.random() - 0.5) * 0.01;
+          const randomLng = -63.8497 + (Math.random() - 0.5) * 0.01;
+          console.log('Simulated location update:', randomLat, randomLng);
+          updateLocationMutation.mutate({ 
+            latitude: randomLat, 
+            longitude: randomLng, 
+            isActive: driverBus.isActive 
+          });
+        }
+      );
+    }
+  };
+
+  const handlePassengerCountChange = (count: number) => {
+    console.log('Passenger count updated to:', count);
+    // In a real app, this would update the passenger count in the backend
+  };
+
+  return (
+    <div className="h-full flex flex-col lg:flex-row gap-4" data-testid="view-driver">
+      {/* Map Section */}
+      <div className="flex-1 min-h-[400px] lg:min-h-full">
+        {(busesLoading || stopsLoading) ? (
+          <div className="h-full flex items-center justify-center bg-muted rounded-md">
+            <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <MapView
+            buses={[driverBus, ...otherBuses]}
+            busStops={busStops}
+            userLocation={{ 
+              latitude: driverBus.latitude, 
+              longitude: driverBus.longitude 
+            }}
+            onMapClick={(lat, lng) => {
+              console.log('Driver clicked map at:', lat, lng);
+              console.log('Current driverBusId:', driverBusId);
+              
+              // Only update if we have a valid driver bus ID
+              if (driverBusId) {
+                console.log('Updating bus location via map click');
+                updateLocationMutation.mutate({ 
+                  latitude: lat, 
+                  longitude: lng, 
+                  isActive: driverBus.isActive 
+                });
+              } else {
+                console.log('Cannot update location: driverBusId not ready yet');
+              }
+            }}
+            className="h-full"
+          />
+        )}
+      </div>
+
+      {/* Driver Controls Section */}
+      <div className="w-full lg:w-80">
+        <DriverControls
+          driverName={driverBus.driverName}
+          currentRoute={driverBus.routeId}
+          isActive={driverBus.isActive}
+          routes={routes}
+          passengerCount={15} // Static for demo - in real app this would be tracked
+          onStatusChange={handleStatusChange}
+          onRouteChange={handleRouteChange}
+          onLocationUpdate={handleLocationUpdate}
+          onPassengerCountChange={handlePassengerCountChange}
+        />
+      </div>
+    </div>
+  );
+}
