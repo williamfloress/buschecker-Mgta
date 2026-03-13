@@ -1,16 +1,65 @@
--- Enable UUID extension
+-- ============================================
+-- CLEAN WIPE: Eliminar todas las tablas (orden: dependientes primero)
+-- Ejecutar este schema para reset completo de la base de datos
+-- ============================================
+
+-- Eliminar triggers (antes de dropear tablas)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP TRIGGER IF EXISTS archive_old_position ON posicion_actual;
+
+-- Eliminar tablas (orden: hijas antes que padres)
+DROP TABLE IF EXISTS posicion_historica;
+DROP TABLE IF EXISTS posicion_actual;
+DROP TABLE IF EXISTS favoritos;
+DROP TABLE IF EXISTS unidad_conductor;
+DROP TABLE IF EXISTS unidades;
+DROP TABLE IF EXISTS ruta_parada;
+DROP TABLE IF EXISTS paradas;
+DROP TABLE IF EXISTS lineas;
+DROP TABLE IF EXISTS perfiles_usuario;
+DROP TABLE IF EXISTS usuarios;
+
+-- ============================================
+-- CREAR ESQUEMA
+-- ============================================
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Table: usuarios (Users)
-CREATE TABLE usuarios (
-    id_usuario UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    rol VARCHAR(50) NOT NULL CHECK (rol IN ('conductor', 'pasajero', 'admin')),
+-- Table: perfiles_usuario (Supabase Auth - vinculada a auth.users)
+CREATE TABLE perfiles_usuario (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    rol TEXT NOT NULL DEFAULT 'pasajero' CHECK (rol IN ('conductor', 'pasajero', 'admin')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Trigger: crear perfil automáticamente al registrarse con Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.perfiles_usuario (id, nombre, rol)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'nombre', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'rol', 'pasajero')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- RLS en perfiles_usuario
+ALTER TABLE perfiles_usuario ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuarios pueden ver su propio perfil" ON perfiles_usuario
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Usuarios pueden actualizar su propio perfil" ON perfiles_usuario
+  FOR UPDATE USING (auth.uid() = id);
 
 -- Table: lineas (Bus Routes/Lines)
 CREATE TABLE lineas (
@@ -65,18 +114,19 @@ CREATE TABLE posicion_actual (
 -- Table: unidad_conductor (Unit-Driver Relationship - 1:1)
 CREATE TABLE unidad_conductor (
     id_unidad UUID PRIMARY KEY REFERENCES unidades(id_unidad) ON DELETE CASCADE,
-    id_usuario UUID NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    id_usuario UUID NOT NULL REFERENCES perfiles_usuario(id) ON DELETE RESTRICT,
     fecha_asignacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     fecha_finalizacion TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE
 );
 
 -- Table: favoritos (Favorites)
+-- id_referencia TEXT: soporta UUID (Supabase paradas) y string IDs (localStorage fallback)
 CREATE TABLE favoritos (
     id_favorito UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    id_usuario UUID NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    id_usuario UUID NOT NULL REFERENCES perfiles_usuario(id) ON DELETE CASCADE,
     tipo_favorito VARCHAR(50) NOT NULL CHECK (tipo_favorito IN ('parada', 'linea')),
-    id_referencia UUID NOT NULL, -- Can reference parada or linea
+    id_referencia TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT unique_user_favorite UNIQUE (id_usuario, tipo_favorito, id_referencia)
 );
@@ -101,19 +151,6 @@ CREATE INDEX idx_posicion_historica_unidad_timestamp ON posicion_historica(id_un
 CREATE INDEX idx_favoritos_usuario ON favoritos(id_usuario);
 CREATE INDEX idx_unidad_conductor_usuario ON unidad_conductor(id_usuario);
 
--- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger for usuarios updated_at
-CREATE TRIGGER update_usuarios_updated_at BEFORE UPDATE ON usuarios
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 -- Function to archive position to historical table
 CREATE OR REPLACE FUNCTION archive_position()
 RETURNS TRIGGER AS $$
@@ -127,4 +164,3 @@ $$ language 'plpgsql';
 -- Trigger to archive old positions
 CREATE TRIGGER archive_old_position BEFORE UPDATE ON posicion_actual
     FOR EACH ROW EXECUTE FUNCTION archive_position();
-

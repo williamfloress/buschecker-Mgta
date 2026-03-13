@@ -38,7 +38,7 @@ function AppContent() {
   const getCurrentView = () => {
     // Public access: always show passenger view (map + real-time tracking)
     if (!user) {
-      return <PassengerView />;
+      return <PassengerView onLoginRequired={() => setIsLoginDialogOpen(true)} />;
     }
 
     // Authenticated users can access role-specific views
@@ -46,18 +46,18 @@ function AppContent() {
     if (userMode === "admin") {
       if (!isAdmin) {
         // If user tries to access admin but isn't admin, show passenger view
-        return <PassengerView />;
+        return <PassengerView onLoginRequired={() => setIsLoginDialogOpen(true)} />;
       }
       return <AdminView />;
     }
     if (userMode === "driver") {
       if (!isDriver) {
         // If user tries to access driver but isn't driver, show passenger view
-        return <PassengerView />;
+        return <PassengerView onLoginRequired={() => setIsLoginDialogOpen(true)} />;
       }
       return <DriverView />;
     }
-    return <PassengerView />;
+    return <PassengerView onLoginRequired={() => setIsLoginDialogOpen(true)} />;
   };
 
   const getFooterText = () => {

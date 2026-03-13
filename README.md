@@ -4,14 +4,14 @@ Una aplicación de seguimiento de autobuses en tiempo real para Isla de Margarit
 
 ## Características
 
-- 🚌 **Acceso Público**: Seguimiento de ubicación de autobuses en tiempo real y vista de mapa (no requiere inicio de sesión)
-- 🗺️ Mapa interactivo con integración de OpenStreetMap
-- 👥 **Funciones Autenticadas**: Múltiples roles de usuario con diferentes permisos
+- **Acceso Público**: Seguimiento de ubicación de autobuses en tiempo real y vista de mapa (no requiere inicio de sesión)
+- Mapa interactivo con integración de OpenStreetMap
+- **Funciones Autenticadas**: Múltiples roles de usuario con diferentes permisos
   - **Pasajero**: Agregar paradas favoritas a tu cuenta
   - **Conductor**: Actualizar ubicación y estado del autobús en tiempo real
   - **Administrador**: Gestionar paradas de autobús (crear, actualizar, eliminar)
-- ⭐ Sistema de favoritos para pasajeros (requiere inicio de sesión)
-- 🌓 Soporte para tema oscuro/claro
+- Sistema de favoritos para pasajeros (requiere inicio de sesión)
+- Soporte para tema oscuro/claro
 
 ## Requisitos Previos
 
@@ -69,7 +69,7 @@ buschecker-mgta/
 │   ├── pages/       # Componentes de página (DriverView, PassengerView)
 │   └── lib/         # Utilidades y cliente API
 ├── shared/          # Esquemas TypeScript compartidos
-└── documentation/   # Documentación del proyecto
+└── documentacion/   # Documentación del proyecto
 
 ```
 
@@ -127,10 +127,10 @@ npm install
 ## Funciones Públicas vs Autenticadas
 
 ### Acceso Público (No Requiere Inicio de Sesión)
-- ✅ Ver ubicaciones de autobuses en tiempo real en el mapa
-- ✅ Ver todas las paradas de autobús y rutas
-- ✅ Rastrear paradas de autobús cercanas
-- ✅ Ver información de llegada de autobuses
+- Ver ubicaciones de autobuses en tiempo real en el mapa
+- Ver todas las paradas de autobús y rutas
+- Rastrear paradas de autobús cercanas
+- Ver información de llegada de autobuses
 
 ### Funciones Autenticadas (Requiere Inicio de Sesión)
 
@@ -156,10 +156,12 @@ La aplicación incluye un sistema de inicio de sesión para acceder a funciones 
 
 ## Próximos Pasos
 
-Sigue la [Lista de Verificación de Implementación MVP](./mvp-implementation-checklist.md) para:
+Consulta el [Estado Actual y Próximos Pasos](./documentacion/01-estado-actual-y-proximos-pasos.md) para ver qué falta por hacer.
+
+Sigue la [Lista de Verificación de Implementación MVP](./documentacion/06-mvp-implementation-checklist.md) o la [versión en español](./documentacion/05-checklist-mvp-implementacion.md) para:
 1. Configurar la base de datos de Supabase
 2. Migrar de almacenamiento en memoria a almacenamiento en base de datos
-3. Implementar autenticación (✅ Completado)
+3. Implementar autenticación (Completado)
 4. Agregar funciones en tiempo real
 
 ## Licencia

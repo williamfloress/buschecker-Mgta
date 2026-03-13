@@ -1,56 +1,68 @@
 import { supabase } from './supabase';
 
 // ============================================
-// USER SERVICES
+// PROFILE SERVICES (Supabase Auth)
 // ============================================
 
-export const userService = {
+export const profileService = {
   /**
-   * Register a new user
+   * Get user profile by auth user ID (from auth.uid())
    */
-  async register(userData) {
+  async getById(userId) {
     const { data, error } = await supabase
-      .from('usuarios')
-      .insert([{
-        nombre: userData.nombre,
-        email: userData.email,
-        password: userData.password, // In production, hash this!
-        rol: userData.rol || 'pasajero'
-      }])
+      .from('perfiles_usuario')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Update user profile (nombre, rol)
+   */
+  async update(userId, updates) {
+    const { data, error } = await supabase
+      .from('perfiles_usuario')
+      .update({
+        nombre: updates.nombre,
+        rol: updates.rol,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
       .select()
       .single();
     
     if (error) throw error;
     return data;
-  },
+  }
+};
 
+// ============================================
+// LEGACY USER SERVICES (deprecado - usar Supabase Auth)
+// ============================================
+
+export const userService = {
   /**
-   * Login user (basic - in production use Supabase Auth)
+   * @deprecated Usar supabase.auth.signUp() - Mantenido para referencia
    */
-  async login(email, password) {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .eq('password', password)
-      .single();
-    
-    if (error) throw error;
-    return data;
+  async register() {
+    throw new Error('Usar Supabase Auth: supabase.auth.signUp()');
   },
 
   /**
-   * Get user by ID
+   * @deprecated Usar supabase.auth.signInWithPassword() - Mantenido para referencia
+   */
+  async login() {
+    throw new Error('Usar Supabase Auth: supabase.auth.signInWithPassword()');
+  },
+
+  /**
+   * Obtener perfil de usuario (compatibilidad)
    */
   async getUserById(userId) {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('id_usuario', userId)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    return profileService.getById(userId);
   }
 };
 

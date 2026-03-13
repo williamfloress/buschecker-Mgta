@@ -4,7 +4,7 @@ import { MapPin, RefreshCw, Star, LogIn } from "lucide-react";
 import MapView from "@/components/MapView";
 import BusArrivalCard from "@/components/BusArrivalCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { busApi, busStopApi } from "@/lib/localStorageApi";
+import { passengerBusApi, passengerBusStopApi } from "@/lib/passengerApi";
 import { favoritosService } from "@/lib/services";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -17,8 +17,12 @@ import {
 } from "@/components/ui/card";
 import type { Bus, BusStop } from "@shared/schema";
 
-export default function PassengerView() {
-  const { user, isPassenger } = useAuth();
+interface PassengerViewProps {
+  onLoginRequired?: () => void;
+}
+
+export default function PassengerView({ onLoginRequired }: PassengerViewProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>();
@@ -28,21 +32,21 @@ export default function PassengerView() {
   // Fetch active buses
   const { data: buses = [], isLoading: busesLoading } = useQuery({
     queryKey: ['buses', 'active'],
-    queryFn: busApi.getActive,
+    queryFn: passengerBusApi.getActive,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Fetch all bus stops
   const { data: busStops = [], isLoading: stopsLoading } = useQuery({
     queryKey: ['bus-stops'],
-    queryFn: busStopApi.getAll,
+    queryFn: passengerBusStopApi.getAll,
   });
 
   // Fetch user favorites (only if authenticated)
   const { data: favorites = [] } = useQuery({
     queryKey: ['favorites', user?.id_usuario],
     queryFn: () => favoritosService.getUserFavorites(user!.id_usuario),
-    enabled: !!user && isPassenger,
+    enabled: !!user,
   });
 
   // Add favorite mutation
@@ -85,7 +89,7 @@ export default function PassengerView() {
   });
 
   const isFavorite = (stopId: string) => {
-    return favorites.some((fav: any) => fav.tipo_favorito === 'parada' && fav.id_referencia === stopId);
+    return favorites.some((fav: any) => fav.tipo_favorito === 'parada' && String(fav.id_referencia) === String(stopId));
   };
 
   const handleToggleFavorite = (stopId: string) => {
@@ -95,10 +99,11 @@ export default function PassengerView() {
         description: "Debes iniciar sesión para agregar favoritos.",
         variant: "destructive",
       });
+      onLoginRequired?.();
       return;
     }
 
-    const favorite = favorites.find((fav: any) => fav.tipo_favorito === 'parada' && fav.id_referencia === stopId);
+    const favorite = favorites.find((fav: any) => fav.tipo_favorito === 'parada' && String(fav.id_referencia) === String(stopId));
     if (favorite) {
       removeFavoriteMutation.mutate(favorite.id_favorito);
     } else {
@@ -251,7 +256,7 @@ export default function PassengerView() {
       {/* Sidebar Section */}
       <div className="w-full lg:w-80 space-y-4 overflow-y-auto max-h-[600px] lg:max-h-full">
         {/* Favorites Section (Authenticated Only) */}
-        {user && isPassenger && (
+        {user && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -318,6 +323,15 @@ export default function PassengerView() {
                 <p className="text-sm text-muted-foreground">
                   Inicia sesión para guardar paradas favoritas
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoginRequired}
+                  className="gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Iniciar sesión
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -377,6 +391,52 @@ export default function PassengerView() {
             </div>
           )}
         </div>
+
+        {/* All Stops Section - Add any stop to favorites */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Todas las paradas</CardTitle>
+            <CardDescription>
+              Haz clic en la estrella para agregar o quitar de favoritos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {busStops.map((stop) => {
+                const isFav = isFavorite(stop.id);
+                return (
+                  <div
+                    key={stop.id}
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{stop.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {stop.latitude.toFixed(4)}, {stop.longitude.toFixed(4)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleFavorite(stop.id)}
+                      title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                      className="shrink-0"
+                    >
+                      <Star
+                        className={`w-4 h-4 ${isFav ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}`}
+                      />
+                    </Button>
+                  </div>
+                );
+              })}
+              {busStops.length === 0 && !stopsLoading && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No hay paradas disponibles
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
