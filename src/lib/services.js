@@ -20,14 +20,13 @@ export const profileService = {
   },
 
   /**
-   * Update user profile (nombre, rol)
+   * Update own profile (solo nombre; el rol se cambia con setRole, solo admin)
    */
   async update(userId, updates) {
     const { data, error } = await supabase
       .from('perfiles_usuario')
       .update({
         nombre: updates.nombre,
-        rol: updates.rol,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)
@@ -36,6 +35,15 @@ export const profileService = {
     
     if (error) throw error;
     return data;
+  },
+
+  /**
+   * Change a user's role (RPC set_user_role; the DB rejects it unless caller is admin)
+   */
+  async setRole(userId, rol) {
+    const { error } = await supabase.rpc('set_user_role', { target_user: userId, new_rol: rol });
+    if (error) throw error;
+    return true;
   }
 };
 

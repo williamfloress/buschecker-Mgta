@@ -1,3 +1,6 @@
+-- ⚠️ OBSOLETO: NO EJECUTAR. Sin RLS en 8 tablas y el registro acepta cualquier rol.
+-- Usar supabase/migrations/ + supabase/seed.sql (ver documentacion/11-auditoria-y-plan-relink.md).
+
 -- ============================================
 -- CLEAN WIPE: Eliminar todas las tablas (orden: dependientes primero)
 -- Ejecutar este schema para reset completo de la base de datos

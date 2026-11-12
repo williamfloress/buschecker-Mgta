@@ -63,20 +63,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación.
+    // IMPORTANTE: el callback NO debe ser async ni hacer await de llamadas a Supabase:
+    // supabase-js mantiene un lock de auth mientras corre este callback y una consulta
+    // dentro (que necesita la sesión) se queda esperando ese mismo lock → deadlock
+    // (el login se queda en "Iniciando sesión..."). Se difiere con setTimeout.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          try {
-            const userData = await buildUserFromSession(session);
-            setUser(userData);
-          } catch (error) {
-            console.error("Error loading profile on auth change:", error);
-            setUser(null);
-          }
-        } else {
+      (_event, session) => {
+        if (!session) {
           setUser(null);
+          return;
         }
+        setTimeout(() => {
+          buildUserFromSession(session)
+            .then(setUser)
+            .catch((error) => {
+              console.error("Error loading profile on auth change:", error);
+              setUser(null);
+            });
+        }, 0);
       }
     );
 
@@ -99,8 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: data.password,
       options: {
         data: {
+          // El rol lo asigna siempre el servidor ('pasajero'); no se envía desde el cliente
           nombre: data.nombre,
-          rol: data.rol || "pasajero",
         },
       },
     });
