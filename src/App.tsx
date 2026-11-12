@@ -9,7 +9,10 @@ import LoginDialog from "@/components/LoginDialog";
 import PassengerView from "@/pages/PassengerView";
 import DriverView from "@/pages/DriverView";
 import AdminView from "@/pages/AdminView";
-import { Bus, LogOut, Shield, LogIn } from "lucide-react";
+import { Bus, LogOut, LogIn } from "lucide-react";
+import { Switch, Route, Link } from "wouter";
+import LandingPage from "@/pages/LandingPage";
+import NotFound from "@/pages/not-found";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -80,13 +83,13 @@ function AppContent() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
-            <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3" aria-label="Ir al inicio de BusChecker">
               <div className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-lg">
                 <Bus className="w-6 h-6" />
               </div>
               <div>
                 <h1 className="text-lg font-bold" data-testid="text-app-title">
-                  BusTracker
+                  BusChecker <span className="font-normal text-muted-foreground">Margarita</span>
                 </h1>
                 <p className="text-xs text-muted-foreground" data-testid="text-app-subtitle">
                   {user 
@@ -95,18 +98,12 @@ function AppContent() {
                   }
                 </p>
               </div>
-            </div>
+            </Link>
 
             {/* Mode Toggle and Actions */}
             <div className="flex items-center gap-4">
               {user ? (
                 <>
-                  {isAdmin && (
-                    <div className="flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                      <Shield className="w-3 h-3" />
-                      Admin
-                    </div>
-                  )}
                   <UserModeToggle 
                     mode={userMode} 
                     onModeChange={setUserMode}
@@ -162,7 +159,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <AppContent />
+          <Switch>
+            <Route path="/" component={LandingPage} />
+            <Route path="/app" component={AppContent} />
+            <Route component={NotFound} />
+          </Switch>
           <Toaster />
         </TooltipProvider>
       </AuthProvider>

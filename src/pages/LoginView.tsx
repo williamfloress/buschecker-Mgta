@@ -44,7 +44,7 @@ export default function LoginView() {
               <Bus className="w-8 h-8" />
             </div>
           </div>
-          <CardTitle className="text-2xl">BusTracker</CardTitle>
+          <CardTitle className="text-2xl">BusChecker Margarita</CardTitle>
           <CardDescription>
             Inicia sesión para acceder al sistema
           </CardDescription>
