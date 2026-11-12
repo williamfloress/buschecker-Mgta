@@ -33,7 +33,7 @@ export default function PassengerView({ onLoginRequired }: PassengerViewProps) {
   const { data: buses = [], isLoading: busesLoading } = useQuery({
     queryKey: ['buses', 'active'],
     queryFn: passengerBusApi.getActive,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 3000, // Refresh every 3 seconds
   });
 
   // Fetch all bus stops

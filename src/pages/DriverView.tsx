@@ -1,59 +1,126 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import MapView from "@/components/MapView";
 import DriverControls from "@/components/DriverControls";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { busApi, busStopApi, routeApi } from "@/lib/localStorageApi";
+import { busApi as localStorageBusApi, busStopApi as localStorageBusStopApi, routeApi as localStorageRouteApi } from "@/lib/localStorageApi";
+import { busApi as supabaseBusApi, busStopApi as supabaseBusStopApi, routeApi as supabaseRouteApi } from "@/lib/api";
+import { startLiveSimulation, startStopApproachTracking } from "@/lib/liveSimulation";
 import type { Bus, BusStop, BusRoute } from "@shared/schema";
 import { RefreshCw } from "lucide-react";
 
 export default function DriverView() {
   const queryClient = useQueryClient();
-  const [driverBusId, setDriverBusId] = useState<string>(''); // Will be set when driver "logs in"
-  
-  // For demo purposes, create or get the current driver's bus
+  const [driverBusId, setDriverBusId] = useState<string>('');
+  const [isSimulating, setIsSimulating] = useState(false);
+  const stopSimulationRef = useRef<(() => void) | null>(null);
+  const stopApproachTrackingRef = useRef<(() => void) | null>(null);
+
+  // For demo purposes, create or get the current driver's bus (only when NOT simulating)
   useEffect(() => {
-    // Simulate getting the current driver's bus ID from localStorage or auth
+    if (isSimulating) return;
+
     const savedDriverBusId = localStorage.getItem('driverBusId');
     if (savedDriverBusId) {
       setDriverBusId(savedDriverBusId);
     } else {
-      // Create a new driver bus for demo
-      busApi.create({
-        routeId: 'RA-1', // Default to first route
+      localStorageBusApi.create({
+        routeId: 'RA-1',
         driverName: 'Current Driver',
-        latitude: 11.0041, // Isla de Margarita coordinates
+        latitude: 11.0041,
         longitude: -63.8497,
         isActive: false
       }).then(newBus => {
-        // Use the created bus ID as the driver ID
         setDriverBusId(newBus.id);
         localStorage.setItem('driverBusId', newBus.id);
       });
     }
-  }, []);
+  }, [isSimulating]);
 
-  // Fetch all buses
+  // Fetch all buses (Supabase when simulating, localStorage otherwise)
   const { data: allBuses = [], isLoading: busesLoading } = useQuery({
-    queryKey: ['buses'],
-    queryFn: busApi.getAll,
-    refetchInterval: 15000, // Refresh every 15 seconds
+    queryKey: ['buses', isSimulating],
+    queryFn: isSimulating ? supabaseBusApi.getAll : localStorageBusApi.getAll,
+    refetchInterval: isSimulating ? 3000 : 15000,
   });
 
   // Fetch all bus stops
   const { data: busStops = [], isLoading: stopsLoading } = useQuery({
-    queryKey: ['bus-stops'],
-    queryFn: busStopApi.getAll,
+    queryKey: ['bus-stops', isSimulating],
+    queryFn: isSimulating ? supabaseBusStopApi.getAll : localStorageBusStopApi.getAll,
   });
 
   // Fetch all routes
   const { data: routes = [], isLoading: routesLoading } = useQuery({
-    queryKey: ['routes'],
-    queryFn: routeApi.getAll,
+    queryKey: ['routes', isSimulating],
+    queryFn: isSimulating ? supabaseRouteApi.getAll : localStorageRouteApi.getAll,
   });
 
+  // When simulating, use first bus as driver bus (persist selection)
+  const effectiveDriverBusId = isSimulating
+    ? (allBuses[0]?.id ?? driverBusId)
+    : driverBusId;
+
+  const toggleSimulation = () => {
+    if (isSimulating) {
+      if (stopSimulationRef.current) {
+        stopSimulationRef.current();
+        stopSimulationRef.current = null;
+      }
+      if (stopApproachTrackingRef.current) {
+        stopApproachTrackingRef.current();
+        stopApproachTrackingRef.current = null;
+      }
+      setIsSimulating(false);
+      setDriverBusId(localStorage.getItem('driverBusId') || '');
+    } else {
+      const stopSim = startLiveSimulation(
+        () => queryClient.invalidateQueries({ queryKey: ['buses', true] }),
+        3000
+      );
+      stopSimulationRef.current = stopSim;
+      setIsSimulating(true);
+    }
+  };
+
+  // Start stop approach tracking when simulating with Supabase buses
+  useEffect(() => {
+    if (!isSimulating || allBuses.length === 0) return;
+    const driverBus = allBuses[0];
+    if (!driverBus?.routeId) return;
+
+    supabaseBusStopApi.getByRoute(driverBus.routeId)
+      .then(stops => {
+        if (stops.length === 0) return;
+        const paradas = stops.map(s => ({
+          id_parada: s.id,
+          latitud: s.latitude,
+          longitud: s.longitude,
+          nombre: s.name
+        }));
+        if (stopApproachTrackingRef.current) {
+          stopApproachTrackingRef.current();
+        }
+        stopApproachTrackingRef.current = startStopApproachTracking(
+          driverBus.id,
+          paradas,
+          (payload) => console.log('[DriverView] Aproximándose a parada:', payload.stop.nombre),
+          100,
+          2000
+        );
+      })
+      .catch(() => {});
+
+    return () => {
+      if (stopApproachTrackingRef.current) {
+        stopApproachTrackingRef.current();
+        stopApproachTrackingRef.current = null;
+      }
+    };
+  }, [isSimulating, allBuses[0]?.id, allBuses[0]?.routeId]);
+
   // Find the current driver's bus
-  const driverBus = allBuses.find(bus => bus.id === driverBusId) || {
-    id: driverBusId,
+  const driverBus = allBuses.find(bus => bus.id === effectiveDriverBusId) || {
+    id: effectiveDriverBusId,
     routeId: '',
     driverName: 'Current Driver',
     latitude: 11.0041,
@@ -63,49 +130,40 @@ export default function DriverView() {
   } as Bus;
   
   // Other buses (excluding driver's bus)
-  const otherBuses = allBuses.filter(bus => bus.id !== driverBusId);
+  const otherBuses = allBuses.filter(bus => bus.id !== effectiveDriverBusId);
   
-  // Mutation for updating bus location using localStorage
+  // Mutation for updating bus location
   const updateLocationMutation = useMutation({
-    mutationFn: ({ latitude, longitude, isActive }: { latitude: number; longitude: number; isActive?: boolean }) => 
-      busApi.updateLocation(driverBusId, latitude, longitude, isActive),
+    mutationFn: ({ latitude, longitude, isActive }: { latitude: number; longitude: number; isActive?: boolean }) =>
+      isSimulating
+        ? supabaseBusApi.updateLocation(effectiveDriverBusId, { latitude, longitude, isActive })
+        : localStorageBusApi.updateLocation(effectiveDriverBusId, latitude, longitude, isActive),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['buses'] });
+      queryClient.invalidateQueries({ queryKey: ['buses', isSimulating] });
     },
   });
 
   const handleStatusChange = (isActive: boolean) => {
-    console.log('Driver status changed to:', isActive);
-    console.log('Current driverBusId for status change:', driverBusId);
-    
-    if (driverBusId) {
+    if (effectiveDriverBusId) {
       updateLocationMutation.mutate({ 
         latitude: driverBus.latitude, 
         longitude: driverBus.longitude, 
         isActive 
       });
-    } else {
-      console.log('Cannot update status: driverBusId not ready yet');
     }
   };
 
   const handleRouteChange = (routeId: string) => {
-    console.log('Driver route changed to:', routeId);
-    console.log('Current driverBusId for route change:', driverBusId);
-    
-    if (driverBusId) {
-      // Update the bus route in localStorage
-      busApi.update(driverBusId, { routeId })
-        .then(() => {
-          console.log('Route update successful');
-          queryClient.invalidateQueries({ queryKey: ['buses'] });
-        })
-        .catch(error => {
-          console.error('Failed to update route:', error);
-        });
-    } else {
-      console.log('Cannot update route: driverBusId not ready yet');
-    }
+    if (!effectiveDriverBusId) return;
+
+    const api = isSimulating ? supabaseBusApi : localStorageBusApi;
+    api.update(effectiveDriverBusId, { routeId })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['buses', isSimulating] });
+      })
+      .catch(error => {
+        console.error('Failed to update route:', error);
+      });
   };
 
   const handleLocationUpdate = () => {
@@ -137,9 +195,22 @@ export default function DriverView() {
   };
 
   const handlePassengerCountChange = (count: number) => {
-    console.log('Passenger count updated to:', count);
     // In a real app, this would update the passenger count in the backend
   };
+
+  // Cleanup simulation on unmount
+  useEffect(() => {
+    return () => {
+      if (stopSimulationRef.current) {
+        stopSimulationRef.current();
+        stopSimulationRef.current = null;
+      }
+      if (stopApproachTrackingRef.current) {
+        stopApproachTrackingRef.current();
+        stopApproachTrackingRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4" data-testid="view-driver">
@@ -158,19 +229,12 @@ export default function DriverView() {
               longitude: driverBus.longitude 
             }}
             onMapClick={(lat, lng) => {
-              console.log('Driver clicked map at:', lat, lng);
-              console.log('Current driverBusId:', driverBusId);
-              
-              // Only update if we have a valid driver bus ID
-              if (driverBusId) {
-                console.log('Updating bus location via map click');
+              if (effectiveDriverBusId) {
                 updateLocationMutation.mutate({ 
                   latitude: lat, 
                   longitude: lng, 
                   isActive: driverBus.isActive 
                 });
-              } else {
-                console.log('Cannot update location: driverBusId not ready yet');
               }
             }}
             className="h-full"
@@ -185,11 +249,13 @@ export default function DriverView() {
           currentRoute={driverBus.routeId}
           isActive={driverBus.isActive}
           routes={routes}
-          passengerCount={15} // Static for demo - in real app this would be tracked
+          passengerCount={15}
+          isSimulating={isSimulating}
           onStatusChange={handleStatusChange}
           onRouteChange={handleRouteChange}
           onLocationUpdate={handleLocationUpdate}
           onPassengerCountChange={handlePassengerCountChange}
+          onSimulationToggle={toggleSimulation}
         />
       </div>
     </div>

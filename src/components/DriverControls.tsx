@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Navigation, Users, CheckCircle } from "lucide-react";
+import { MapPin, Navigation, Users, CheckCircle, Play } from "lucide-react";
 import BusStatusBadge from "./BusStatusBadge";
 import type { BusRoute } from "@shared/schema";
 
@@ -14,10 +14,12 @@ interface DriverControlsProps {
   isActive?: boolean;
   passengerCount?: number;
   routes?: BusRoute[];
+  isSimulating?: boolean;
   onStatusChange?: (isActive: boolean) => void;
   onRouteChange?: (routeId: string) => void;
   onLocationUpdate?: () => void;
   onPassengerCountChange?: (count: number) => void;
+  onSimulationToggle?: (enabled: boolean) => void;
   className?: string;
 }
 
@@ -27,10 +29,12 @@ export default function DriverControls({
   isActive = false,
   passengerCount = 0,
   routes = [],
+  isSimulating = false,
   onStatusChange,
   onRouteChange,
   onLocationUpdate,
   onPassengerCountChange,
+  onSimulationToggle,
   className = ""
 }: DriverControlsProps) {
   const [localPassengerCount, setLocalPassengerCount] = useState(passengerCount);
@@ -76,6 +80,22 @@ export default function DriverControls({
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {/* Simulation Toggle */}
+        {onSimulationToggle && (
+          <div className="flex items-center justify-between">
+            <Label htmlFor="simulation" className="text-sm font-medium flex items-center gap-2">
+              <Play className="w-4 h-4" />
+              Simulación en vivo
+            </Label>
+            <Switch
+              id="simulation"
+              checked={isSimulating}
+              onCheckedChange={onSimulationToggle}
+              data-testid="switch-simulation"
+            />
+          </div>
+        )}
+
         {/* Active Status Toggle */}
         <div className="flex items-center justify-between">
           <Label htmlFor="active-status" className="text-sm font-medium">

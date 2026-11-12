@@ -10,6 +10,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
+function isValidLat(val: unknown): val is number {
+  return typeof val === 'number' && Number.isFinite(val) && val >= -90 && val <= 90;
+}
+
+function isValidLng(val: unknown): val is number {
+  return typeof val === 'number' && Number.isFinite(val) && val >= -180 && val <= 180;
+}
+
+function hasValidCoords(bus: Bus): boolean {
+  return isValidLat(bus.latitude) && isValidLng(bus.longitude);
+}
+
 interface MapViewProps {
   buses: Bus[];
   busStops: BusStop[];
@@ -30,13 +42,15 @@ export default function MapView({
   const busMarkersRef = useRef<L.Marker[]>([]);
   const stopMarkersRef = useRef<L.Marker[]>([]);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const isMountedRef = useRef(true);
 
   // Initialize map
   useEffect(() => {
+    isMountedRef.current = true;
     if (!mapContainerRef.current || mapRef.current) return;
 
-    // Use Isla de Margarita coordinates as default center
-    const map = L.map(mapContainerRef.current).setView([11.0041, -63.8497], 11);
+    const container = mapContainerRef.current;
+    const map = L.map(container).setView([11.0041, -63.8497], 11);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
@@ -52,8 +66,16 @@ export default function MapView({
     mapRef.current = map;
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
+      isMountedRef.current = false;
+      busMarkersRef.current = [];
+      stopMarkersRef.current = [];
+      userMarkerRef.current = null;
+      try {
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      } catch {
         mapRef.current = null;
       }
     };
@@ -61,25 +83,31 @@ export default function MapView({
 
   // Update bus markers
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMountedRef.current) return;
+    if (!mapContainerRef.current?.isConnected) return;
+
+    const map = mapRef.current;
 
     // Clear existing bus markers safely
     busMarkersRef.current.forEach(marker => {
       try {
-        if (mapRef.current && marker) {
-          mapRef.current.removeLayer(marker);
+        if (marker && map.hasLayer(marker)) {
+          map.removeLayer(marker);
         }
-      } catch (e) {
+      } catch {
         // Ignore cleanup errors
       }
     });
     busMarkersRef.current = [];
 
-    // Add new bus markers
-    buses.forEach(bus => {
-      if (!mapRef.current) return;
+    // Add new bus markers (only with valid coordinates)
+    const validBuses = buses.filter(hasValidCoords);
+    validBuses.forEach(bus => {
+      if (!mapRef.current || !isMountedRef.current) return;
       
-      console.log('Creating marker for bus:', bus.id, 'isActive:', bus.isActive);
+      const lat = Number(bus.latitude);
+      const lng = Number(bus.longitude);
+      if (!isValidLat(lat) || !isValidLng(lng)) return;
       
       const busIcon = L.divIcon({
         className: `bus-marker ${bus.isActive ? 'bus-active' : 'bus-inactive'}`,
@@ -98,7 +126,7 @@ export default function MapView({
         iconAnchor: [16, 16],
       });
 
-      const marker = L.marker([bus.latitude, bus.longitude], { icon: busIcon })
+      const marker = L.marker([lat, lng], { icon: busIcon })
         .bindPopup(`
           <div class="text-sm">
             <div class="font-semibold">Bus ${bus.routeId}</div>
@@ -118,23 +146,29 @@ export default function MapView({
 
   // Update bus stop markers
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMountedRef.current) return;
+    if (!mapContainerRef.current?.isConnected) return;
+
+    const map = mapRef.current;
 
     // Clear existing stop markers safely
     stopMarkersRef.current.forEach(marker => {
       try {
-        if (mapRef.current && marker) {
-          mapRef.current.removeLayer(marker);
+        if (marker && map.hasLayer(marker)) {
+          map.removeLayer(marker);
         }
-      } catch (e) {
+      } catch {
         // Ignore cleanup errors
       }
     });
     stopMarkersRef.current = [];
 
-    // Add new stop markers
+    // Add new stop markers (only with valid coordinates)
     busStops.forEach(stop => {
-      if (!mapRef.current) return;
+      if (!mapRef.current || !isMountedRef.current) return;
+      const lat = Number(stop.latitude);
+      const lng = Number(stop.longitude);
+      if (!isValidLat(lat) || !isValidLng(lng)) return;
       
       const stopIcon = L.divIcon({
         className: 'bus-stop-marker',
@@ -145,7 +179,7 @@ export default function MapView({
         iconAnchor: [12, 12],
       });
 
-      const marker = L.marker([stop.latitude, stop.longitude], { icon: stopIcon })
+      const marker = L.marker([lat, lng], { icon: stopIcon })
         .bindPopup(`
           <div class="text-sm">
             <div class="font-semibold">${stop.name}</div>
@@ -162,22 +196,25 @@ export default function MapView({
 
   // Update user location marker
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMountedRef.current) return;
+    if (!mapContainerRef.current?.isConnected) return;
+
+    const map = mapRef.current;
 
     // Clear existing user marker safely
     if (userMarkerRef.current) {
       try {
-        if (mapRef.current) {
-          mapRef.current.removeLayer(userMarkerRef.current);
+        if (map.hasLayer(userMarkerRef.current)) {
+          map.removeLayer(userMarkerRef.current);
         }
-      } catch (e) {
+      } catch {
         // Ignore cleanup errors
       }
       userMarkerRef.current = null;
     }
 
-    // Add user location marker if available
-    if (userLocation) {
+    // Add user location marker if available (with valid coordinates)
+    if (userLocation && isValidLat(userLocation.latitude) && isValidLng(userLocation.longitude)) {
       const userIcon = L.divIcon({
         className: 'user-marker',
         html: `<div class="bg-blue-500 border-2 border-white rounded-full w-4 h-4 shadow-lg animate-pulse"></div>`,

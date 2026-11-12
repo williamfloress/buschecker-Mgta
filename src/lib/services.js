@@ -303,7 +303,7 @@ export const unidadService = {
         lineas:lineas (*),
         posicion_actual:posicion_actual (*),
         unidad_conductor:unidad_conductor (
-          usuarios:usuarios (*)
+          perfiles_usuario:perfiles_usuario (*)
         )
       `)
       .eq('id_unidad', unidadId)
@@ -365,6 +365,21 @@ export const unidadService = {
     const { data, error } = await supabase
       .from('unidades')
       .update({ is_active: isActive })
+      .eq('id_unidad', unidadId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Update unit route (id_linea)
+   */
+  async updateRoute(unidadId, lineaId) {
+    const { data, error } = await supabase
+      .from('unidades')
+      .update({ id_linea: lineaId })
       .eq('id_unidad', unidadId)
       .select()
       .single();

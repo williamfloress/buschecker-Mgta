@@ -10,7 +10,7 @@ import type { Bus, BusRoute, BusStop, InsertBus, InsertBusRoute, InsertBusStop, 
 const mapUnidadToBus = (unidad: any): Bus => ({
   id: unidad.id_unidad,
   routeId: unidad.id_linea,
-  driverName: unidad.unidad_conductor?.[0]?.usuarios?.nombre || unidad.unidad_conductor?.usuarios?.nombre || 'Sin conductor',
+  driverName: unidad.unidad_conductor?.[0]?.perfiles_usuario?.nombre || unidad.unidad_conductor?.perfiles_usuario?.nombre || 'Sin conductor',
   latitude: unidad.posicion_actual?.latitud || 0,
   longitude: unidad.posicion_actual?.longitud || 0,
   isActive: unidad.is_active,
@@ -70,6 +70,14 @@ export const busApi = {
     // Update unit active status
     await unidadService.updateActiveStatus(id, update.isActive);
     
+    const unidad = await unidadService.getById(id);
+    return mapUnidadToBus(unidad);
+  },
+
+  update: async (id: string, updateData: { routeId?: string }): Promise<Bus> => {
+    if (updateData.routeId) {
+      await unidadService.updateRoute(id, updateData.routeId);
+    }
     const unidad = await unidadService.getById(id);
     return mapUnidadToBus(unidad);
   }
