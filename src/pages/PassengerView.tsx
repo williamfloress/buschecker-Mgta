@@ -215,9 +215,9 @@ export default function PassengerView({ onLoginRequired }: PassengerViewProps) {
   }, [busStops, userLocation]);
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4" data-testid="view-passenger">
+    <div className="h-full flex flex-col lg:flex-row lg:items-start gap-4" data-testid="view-passenger">
       {/* Map Section */}
-      <div className="flex-1 min-h-[400px] lg:min-h-full">
+      <div className="flex-1 min-w-0 h-[350px] sm:h-[400px] lg:h-[520px] lg:sticky lg:top-4">
         <div className="relative h-full rounded-md overflow-hidden">
           {(busesLoading || stopsLoading) ? (
             <div className="h-full flex items-center justify-center bg-muted rounded-md">

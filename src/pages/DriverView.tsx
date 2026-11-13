@@ -181,9 +181,9 @@ export default function DriverView() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4" data-testid="view-driver">
+    <div className="h-full flex flex-col lg:flex-row lg:items-start gap-4" data-testid="view-driver">
       {/* Map Section */}
-      <div className="flex-1 min-h-[400px] lg:min-h-full">
+      <div className="flex-1 min-w-0 h-[350px] sm:h-[400px] lg:h-[520px] lg:sticky lg:top-4">
         {(busesLoading || stopsLoading) ? (
           <div className="h-full flex items-center justify-center bg-muted rounded-md">
             <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
