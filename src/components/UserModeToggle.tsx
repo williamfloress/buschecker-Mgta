@@ -23,8 +23,8 @@ export default function UserModeToggle({
   }
 
   const isAdmin = userRole === "admin";
-  const isDriver = userRole === "conductor" || userRole === "driver";
-  const isPassenger = userRole === "pasajero" || userRole === "passenger";
+  const isDriver = userRole === "conductor";
+  const isPassenger = userRole === "pasajero";
 
   return (
     <div className={`flex bg-muted rounded-md p-1 ${className}`} data-testid="toggle-user-mode">

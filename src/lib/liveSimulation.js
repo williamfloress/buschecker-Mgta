@@ -4,7 +4,7 @@ import { posicionService, unidadService } from './services';
  * Simulates live bus movement by updating positions periodically in Supabase.
  * @param {Function} onUpdate - Callback function called on each update with the updated units
  * @param {number} intervalMs - Update interval in milliseconds (default: 3000)
- * @returns {Function} - Function to stop the simulation
+ * @returns {() => void} - Function to stop the simulation
  */
 export function startLiveSimulation(onUpdate, intervalMs = 3000) {
   let intervalId = null;
@@ -106,10 +106,10 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
  * Calls onApproach when the unit is within the threshold distance of a stop.
  * @param {string} unidadId - Unit ID
  * @param {Array} stops - Array of stops with { id_parada, latitud, longitud, nombre }
- * @param {Function} onApproach - Callback when approaching a stop: (payload) => void
+ * @param {(payload: { stop: { nombre: string } } & Record<string, any>) => void} onApproach - Callback when approaching a stop: (payload) => void
  * @param {number} approachDistanceMeters - Distance threshold in meters (default: 100)
  * @param {number} intervalMs - Check interval in milliseconds (default: 2000)
- * @returns {Function} - Function to stop the tracking
+ * @returns {() => void} - Function to stop the tracking
  */
 export function startStopApproachTracking(
   unidadId,

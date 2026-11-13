@@ -4,7 +4,7 @@ import {
   unidadService, 
   posicionService 
 } from './services';
-import type { Bus, BusRoute, BusStop, InsertBus, InsertBusRoute, InsertBusStop, UpdateBusLocation } from "@shared/schema";
+import type { Bus, BusRoute, BusStop, InsertBus, InsertBusRoute, InsertBusStop, UpdateBusLocation } from "@/lib/types";
 
 // Map Supabase schema to frontend types
 const mapUnidadToBus = (unidad: any): Bus => ({

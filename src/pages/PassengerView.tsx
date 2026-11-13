@@ -4,7 +4,7 @@ import { MapPin, RefreshCw, Star, LogIn } from "lucide-react";
 import MapView from "@/components/MapView";
 import BusArrivalCard from "@/components/BusArrivalCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { passengerBusApi, passengerBusStopApi } from "@/lib/passengerApi";
+import { busApi, busStopApi } from "@/lib/api";
 import { favoritosService } from "@/lib/services";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Bus, BusStop } from "@shared/schema";
+import type { Bus, BusStop } from "@/lib/types";
 
 interface PassengerViewProps {
   onLoginRequired?: () => void;
@@ -32,14 +32,14 @@ export default function PassengerView({ onLoginRequired }: PassengerViewProps) {
   // Fetch active buses
   const { data: buses = [], isLoading: busesLoading } = useQuery({
     queryKey: ['buses', 'active'],
-    queryFn: passengerBusApi.getActive,
+    queryFn: busApi.getActive,
     refetchInterval: 3000, // Refresh every 3 seconds
   });
 
   // Fetch all bus stops
   const { data: busStops = [], isLoading: stopsLoading } = useQuery({
     queryKey: ['bus-stops'],
-    queryFn: passengerBusStopApi.getAll,
+    queryFn: busStopApi.getAll,
   });
 
   // Fetch user favorites (only if authenticated)

@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*", "shared/**/*", "server/**/*"],
+  "include": ["src/**/*", "vite.config.ts", "tailwind.config.ts"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
@@ -12,12 +12,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
+    "allowJs": true,
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["./src/*"]
     }
   }
 }

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Navigation, Users, CheckCircle, Play } from "lucide-react";
 import BusStatusBadge from "./BusStatusBadge";
-import type { BusRoute } from "@shared/schema";
+import type { BusRoute } from "@/lib/types";
 
 interface DriverControlsProps {
   driverName?: string;

@@ -2,63 +2,35 @@ import { useState, useEffect, useRef } from "react";
 import MapView from "@/components/MapView";
 import DriverControls from "@/components/DriverControls";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { busApi as localStorageBusApi, busStopApi as localStorageBusStopApi, routeApi as localStorageRouteApi } from "@/lib/localStorageApi";
-import { busApi as supabaseBusApi, busStopApi as supabaseBusStopApi, routeApi as supabaseRouteApi } from "@/lib/api";
+import { busApi, busStopApi, routeApi } from "@/lib/api";
 import { startLiveSimulation, startStopApproachTracking } from "@/lib/liveSimulation";
-import type { Bus, BusStop, BusRoute } from "@shared/schema";
+import type { Bus, BusStop, BusRoute } from "@/lib/types";
 import { RefreshCw } from "lucide-react";
 
 export default function DriverView() {
   const queryClient = useQueryClient();
-  const [driverBusId, setDriverBusId] = useState<string>('');
   const [isSimulating, setIsSimulating] = useState(false);
   const stopSimulationRef = useRef<(() => void) | null>(null);
   const stopApproachTrackingRef = useRef<(() => void) | null>(null);
 
-  // For demo purposes, create or get the current driver's bus (only when NOT simulating)
-  useEffect(() => {
-    if (isSimulating) return;
-
-    const savedDriverBusId = localStorage.getItem('driverBusId');
-    if (savedDriverBusId) {
-      setDriverBusId(savedDriverBusId);
-    } else {
-      localStorageBusApi.create({
-        routeId: 'RA-1',
-        driverName: 'Current Driver',
-        latitude: 11.0041,
-        longitude: -63.8497,
-        isActive: false
-      }).then(newBus => {
-        setDriverBusId(newBus.id);
-        localStorage.setItem('driverBusId', newBus.id);
-      });
-    }
-  }, [isSimulating]);
-
-  // Fetch all buses (Supabase when simulating, localStorage otherwise)
   const { data: allBuses = [], isLoading: busesLoading } = useQuery({
-    queryKey: ['buses', isSimulating],
-    queryFn: isSimulating ? supabaseBusApi.getAll : localStorageBusApi.getAll,
+    queryKey: ['buses'],
+    queryFn: busApi.getAll,
     refetchInterval: isSimulating ? 3000 : 15000,
   });
 
-  // Fetch all bus stops
   const { data: busStops = [], isLoading: stopsLoading } = useQuery({
-    queryKey: ['bus-stops', isSimulating],
-    queryFn: isSimulating ? supabaseBusStopApi.getAll : localStorageBusStopApi.getAll,
+    queryKey: ['bus-stops'],
+    queryFn: busStopApi.getAll,
   });
 
-  // Fetch all routes
-  const { data: routes = [], isLoading: routesLoading } = useQuery({
-    queryKey: ['routes', isSimulating],
-    queryFn: isSimulating ? supabaseRouteApi.getAll : localStorageRouteApi.getAll,
+  const { data: routes = [] } = useQuery({
+    queryKey: ['routes'],
+    queryFn: routeApi.getAll,
   });
 
-  // When simulating, use first bus as driver bus (persist selection)
-  const effectiveDriverBusId = isSimulating
-    ? (allBuses[0]?.id ?? driverBusId)
-    : driverBusId;
+  // TODO (Fase 1): usar la unidad asignada al conductor vía unidad_conductor.
+  const effectiveDriverBusId = allBuses[0]?.id ?? '';
 
   const toggleSimulation = () => {
     if (isSimulating) {
@@ -71,10 +43,9 @@ export default function DriverView() {
         stopApproachTrackingRef.current = null;
       }
       setIsSimulating(false);
-      setDriverBusId(localStorage.getItem('driverBusId') || '');
     } else {
       const stopSim = startLiveSimulation(
-        () => queryClient.invalidateQueries({ queryKey: ['buses', true] }),
+        () => queryClient.invalidateQueries({ queryKey: ['buses'] }),
         3000
       );
       stopSimulationRef.current = stopSim;
@@ -88,7 +59,7 @@ export default function DriverView() {
     const driverBus = allBuses[0];
     if (!driverBus?.routeId) return;
 
-    supabaseBusStopApi.getByRoute(driverBus.routeId)
+    busStopApi.getByRoute(driverBus.routeId)
       .then(stops => {
         if (stops.length === 0) return;
         const paradas = stops.map(s => ({
@@ -135,11 +106,9 @@ export default function DriverView() {
   // Mutation for updating bus location
   const updateLocationMutation = useMutation({
     mutationFn: ({ latitude, longitude, isActive }: { latitude: number; longitude: number; isActive?: boolean }) =>
-      isSimulating
-        ? supabaseBusApi.updateLocation(effectiveDriverBusId, { latitude, longitude, isActive })
-        : localStorageBusApi.updateLocation(effectiveDriverBusId, latitude, longitude, isActive),
+      busApi.updateLocation(effectiveDriverBusId, { latitude, longitude, isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['buses', isSimulating] });
+      queryClient.invalidateQueries({ queryKey: ['buses'] });
     },
   });
 
@@ -156,10 +125,9 @@ export default function DriverView() {
   const handleRouteChange = (routeId: string) => {
     if (!effectiveDriverBusId) return;
 
-    const api = isSimulating ? supabaseBusApi : localStorageBusApi;
-    api.update(effectiveDriverBusId, { routeId })
+    busApi.update(effectiveDriverBusId, { routeId })
       .then(() => {
-        queryClient.invalidateQueries({ queryKey: ['buses', isSimulating] });
+        queryClient.invalidateQueries({ queryKey: ['buses'] });
       })
       .catch(error => {
         console.error('Failed to update route:', error);

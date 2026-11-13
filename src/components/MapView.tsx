@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import { Bus, BusStop } from "@shared/schema";
+import { Bus, BusStop } from "@/lib/types";
 
 // Fix for default markers in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
