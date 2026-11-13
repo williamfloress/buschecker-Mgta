@@ -14,67 +14,77 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 98%;
+  --background: 70 20% 97%;
 
-  --foreground: 0 0% 15%;
+  --foreground: 80 15% 13%;
 
-  --border: 0 0% 88%;
+  --border: 75 12% 86%;
 
-  --card: 0 0% 100%;
+  --card: 60 25% 99.5%;
 
-  --card-foreground: 0 0% 15%;
+  --card-foreground: 80 15% 13%;
 
-  --card-border: 0 0% 92%;
+  --card-border: 75 12% 90%;
 
-  --sidebar: 0 0% 96%;
+  --sidebar: 72 16% 95%;
 
-  --sidebar-foreground: 0 0% 15%;
+  --sidebar-foreground: 80 15% 13%;
 
-  --sidebar-border: 0 0% 88%;
+  --sidebar-border: 75 12% 86%;
 
-  --sidebar-primary: 210 85% 45%;
+  --sidebar-primary: 82 39% 30%;
 
-  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-primary-foreground: 60 30% 97%;
 
-  --sidebar-accent: 0 0% 90%;
+  --sidebar-accent: 75 14% 90%;
 
-  --sidebar-accent-foreground: 0 0% 15%;
+  --sidebar-accent-foreground: 80 15% 13%;
 
-  --sidebar-ring: 210 85% 45%;
+  --sidebar-ring: 82 39% 30%;
 
-  --popover: 0 0% 94%;
+  --popover: 70 18% 96%;
 
-  --popover-foreground: 0 0% 15%;
+  --popover-foreground: 80 15% 13%;
 
-  --popover-border: 0 0% 86%;
+  --popover-border: 75 12% 86%;
 
-  --primary: 210 85% 45%;
+  --primary: 82 39% 30%;
 
-  --primary-foreground: 0 0% 98%;
+  --primary-foreground: 60 30% 97%;
 
-  --secondary: 0 0% 92%;
+  --secondary: 75 14% 91%;
 
-  --secondary-foreground: 0 0% 15%;
+  --secondary-foreground: 80 15% 13%;
 
-  --muted: 210 5% 90%;
+  --muted: 75 14% 92%;
 
-  --muted-foreground: 0 0% 40%;
+  --muted-foreground: 80 8% 38%;
 
-  --accent: 210 8% 88%;
+  --accent: 75 14% 89%;
 
-  --accent-foreground: 0 0% 15%;
+  --accent-foreground: 80 15% 13%;
 
   --destructive: 0 70% 50%;
 
   --destructive-foreground: 0 0% 98%;
 
-  --input: 0 0% 75%;
-  --ring: 210 85% 45%;
-  --chart-1: 210 85% 35%;
+  --input: 75 10% 72%;
+  --ring: 82 39% 30%;
+  --chart-1: 82 39% 35%;
   --chart-2: 142 70% 35%;
   --chart-3: 38 90% 45%;
   --chart-4: 280 60% 40%;
   --chart-5: 15 80% 45%;
+
+  /* Colores fijos de la marca (logo, favicon): iguales en claro y oscuro */
+  --brand-olive: #556b2f;
+  --brand-cream: #f4f1e1;
+  --brand-mustard: #e3b23c;
+
+  /* Mapa ilustrado de la portada */
+  --map-sea: 199 45% 86%;
+  --map-land: 70 22% 94%;
+  --map-coast: 75 15% 80%;
 
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
@@ -132,64 +142,67 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 15 10% 8%;
+  --background: 80 10% 7%;
 
-  --foreground: 0 0% 95%;
+  --foreground: 60 15% 94%;
 
-  --border: 15 8% 18%;
+  --border: 80 8% 17%;
 
-  --card: 15 8% 12%;
+  --card: 80 9% 10.5%;
 
-  --card-foreground: 0 0% 95%;
+  --card-foreground: 60 15% 94%;
 
-  --card-border: 15 8% 20%;
+  --card-border: 80 8% 19%;
 
-  --sidebar: 15 8% 10%;
+  --sidebar: 80 9% 9%;
 
-  --sidebar-foreground: 0 0% 95%;
+  --sidebar-foreground: 60 15% 94%;
 
-  --sidebar-border: 15 8% 18%;
+  --sidebar-border: 80 8% 17%;
 
-  --sidebar-primary: 210 100% 60%;
+  --sidebar-primary: 76 42% 55%;
 
-  --sidebar-primary-foreground: 0 0% 15%;
+  --sidebar-primary-foreground: 80 30% 9%;
 
-  --sidebar-accent: 15 6% 16%;
+  --sidebar-accent: 80 7% 15%;
 
-  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-accent-foreground: 60 15% 94%;
 
-  --sidebar-ring: 210 100% 60%;
+  --sidebar-ring: 76 42% 55%;
 
-  --popover: 15 6% 14%;
+  --popover: 80 8% 13%;
 
-  --popover-foreground: 0 0% 95%;
+  --popover-foreground: 60 15% 94%;
 
-  --popover-border: 15 8% 22%;
+  --popover-border: 80 8% 21%;
 
-  --primary: 210 100% 60%;
+  --primary: 76 42% 55%;
 
-  --primary-foreground: 0 0% 15%;
+  --primary-foreground: 80 30% 9%;
 
-  --secondary: 15 6% 18%;
+  --secondary: 80 7% 16%;
 
-  --secondary-foreground: 0 0% 95%;
+  --secondary-foreground: 60 15% 94%;
 
-  --muted: 210 5% 16%;
+  --muted: 80 7% 15%;
 
-  --muted-foreground: 0 0% 65%;
+  --muted-foreground: 70 6% 66%;
 
-  --accent: 210 8% 18%;
+  --accent: 80 8% 17%;
 
-  --accent-foreground: 0 0% 95%;
+  --accent-foreground: 60 15% 94%;
 
   --destructive: 0 70% 50%;
 
   --destructive-foreground: 0 0% 95%;
 
   /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
-  --input: 15 8% 35%;
-  --ring: 210 100% 60%;
-  --chart-1: 210 100% 70%;
+  --input: 80 7% 33%;
+  --ring: 76 42% 55%;
+  --chart-1: 76 42% 62%;
+  --map-sea: 205 30% 13%;
+  --map-land: 80 9% 16%;
+  --map-coast: 80 8% 24%;
   --chart-2: 142 70% 55%;
   --chart-3: 38 90% 65%;
   --chart-4: 280 60% 65%;

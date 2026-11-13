@@ -4,12 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import UserModeToggle from "@/components/UserModeToggle";
+import BrandMark from "@/components/BrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import LoginDialog from "@/components/LoginDialog";
 import PassengerView from "@/pages/PassengerView";
 import DriverView from "@/pages/DriverView";
 import AdminView from "@/pages/AdminView";
-import { Bus, LogOut, LogIn } from "lucide-react";
+import { LogOut, LogIn } from "lucide-react";
 import { Switch, Route, Link } from "wouter";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/not-found";
@@ -84,9 +85,7 @@ function AppContent() {
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
             <Link href="/" className="flex items-center gap-3" aria-label="Ir al inicio de BusChecker">
-              <div className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-lg">
-                <Bus className="w-6 h-6" />
-              </div>
+              <BrandMark className="w-10 h-10" />
               <div>
                 <h1 className="text-lg font-bold" data-testid="text-app-title">
                   BusChecker <span className="font-normal text-muted-foreground">Margarita</span>

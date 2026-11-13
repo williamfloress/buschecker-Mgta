@@ -1,10 +1,10 @@
 import { useState } from "react";
+import BrandMark from "@/components/BrandMark";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginView() {
@@ -40,9 +40,7 @@ export default function LoginView() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center justify-center w-16 h-16 bg-primary text-primary-foreground rounded-lg">
-              <Bus className="w-8 h-8" />
-            </div>
+            <BrandMark className="w-16 h-16" />
           </div>
           <CardTitle className="text-2xl">BusChecker Margarita</CardTitle>
           <CardDescription>

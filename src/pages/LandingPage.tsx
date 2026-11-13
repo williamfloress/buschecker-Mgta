@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bus,
   MapPin,
   ShieldCheck,
   Smartphone,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
+import BrandMark from "@/components/BrandMark";
 import { lineaService } from "@/lib/services";
 
 type Linea = { id_linea: string; nombre: string; color: string | null };
@@ -44,82 +44,188 @@ function splitLineName(nombre: string) {
     : { code, name: restText, detail: "" };
 }
 
-// Rutas ilustrativas del mapa de la portada (coordenadas del viewBox 400×260)
-const ROUTE_EAST = "M235,185 C250,150 270,120 300,105 S350,110 352,150";
-const ROUTE_WEST = "M90,170 C110,150 150,150 170,160 S215,165 235,185";
+/** Ancho máximo y márgenes laterales comunes a todas las secciones de la portada. */
+const WRAP = "mx-auto w-full max-w-6xl px-5 sm:px-8";
+
+// Ilustración del hero (viewBox 400×300): la ruta RA-1 de Porlamar a Playa El Agua,
+// con "tu parada" en el C.C. Sambil. El autobús se acerca y la tarjeta cuenta los minutos.
+const P_START: [number, number] = [62, 252];
+const P_STOP: [number, number] = [196, 166];
+const P_END: [number, number] = [338, 62];
+const LEG_1 = `M${P_START} C110,246 150,200 ${P_STOP}`;
+const ROUTE = `${LEG_1} S292,104 ${P_END}`;
+
+// Tiempos del ciclo (ms) y minutos de ETA al salir de Porlamar
+const T_TO_STOP = 7000;
+const T_DWELL = 2200;
+const T_TO_END = 4500;
+const T_PAUSE = 1300;
+const CYCLE = T_TO_STOP + T_DWELL + T_TO_END + T_PAUSE;
+const ETA_START_MIN = 6;
+
+type Phase = { kind: "approaching"; minutes: number } | { kind: "atStop" } | { kind: "passed" };
+
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 function HeroMap() {
   const reduced = usePrefersReducedMotion();
+  const routeRef = useRef<SVGPathElement>(null);
+  const leg1Ref = useRef<SVGPathElement>(null);
+  const busRef = useRef<SVGGElement>(null);
+  const [phase, setPhase] = useState<Phase>({ kind: "approaching", minutes: 3 });
+  const [progress, setProgress] = useState(0.55);
 
-  const bus = (path: string, dur: string, color: string, staticAt: [number, number]) =>
-    reduced ? (
-      <g transform={`translate(${staticAt[0]} ${staticAt[1]})`}>
-        <circle r="8" fill={color} stroke="hsl(var(--card))" strokeWidth="3" />
-      </g>
-    ) : (
-      <g>
-        <circle r="14" fill={color} opacity="0.18">
-          <animate attributeName="r" values="9;16;9" dur="2s" repeatCount="indefinite" />
-        </circle>
-        <circle r="8" fill={color} stroke="hsl(var(--card))" strokeWidth="3" />
-        <animateMotion
-          dur={dur}
-          repeatCount="indefinite"
-          path={path}
-          keyPoints="0;1;0"
-          keyTimes="0;0.5;1"
-          calcMode="linear"
-        />
-      </g>
-    );
+  useEffect(() => {
+    const route = routeRef.current;
+    const leg1 = leg1Ref.current;
+    const busEl = busRef.current;
+    if (!route || !leg1 || !busEl) return;
 
-  const stop = (x: number, y: number) => (
-    <circle cx={x} cy={y} r="5" fill="hsl(var(--card))" stroke="hsl(var(--foreground))" strokeWidth="2" />
+    const total = route.getTotalLength();
+    const toStop = leg1.getTotalLength();
+    const place = (len: number) => {
+      const p = route.getPointAtLength(len);
+      busEl.setAttribute("transform", `translate(${p.x} ${p.y})`);
+    };
+
+    if (reduced) {
+      place(toStop * 0.55);
+      setPhase({ kind: "approaching", minutes: 3 });
+      setProgress(0.55);
+      return;
+    }
+
+    let raf = 0;
+    let lastKey = "";
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = (now - start) % CYCLE;
+      let len: number;
+      let next: Phase;
+      let prog: number;
+
+      if (t < T_TO_STOP) {
+        const f = easeInOut(t / T_TO_STOP);
+        len = f * toStop;
+        prog = f;
+        next = { kind: "approaching", minutes: Math.max(1, Math.ceil((1 - f) * ETA_START_MIN)) };
+      } else if (t < T_TO_STOP + T_DWELL) {
+        len = toStop;
+        prog = 1;
+        next = { kind: "atStop" };
+      } else if (t < T_TO_STOP + T_DWELL + T_TO_END) {
+        const f = easeInOut((t - T_TO_STOP - T_DWELL) / T_TO_END);
+        len = toStop + f * (total - toStop);
+        prog = 1;
+        next = { kind: "passed" };
+      } else {
+        len = total;
+        prog = 1;
+        next = { kind: "passed" };
+      }
+
+      place(len);
+      busEl.style.opacity = t > CYCLE - 400 ? String((CYCLE - t) / 400) : "1";
+      const key = next.kind === "approaching" ? `a${next.minutes}` : next.kind;
+      if (key !== lastKey) {
+        lastKey = key;
+        setPhase(next);
+      }
+      setProgress((p) => (Math.abs(p - prog) > 0.01 ? prog : p));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
+
+  const label = (x: number, y: number, text: string, anchor: "start" | "end" = "start", bold = false) => (
+    <text
+      x={x}
+      y={y}
+      textAnchor={anchor}
+      fontSize="11"
+      fontWeight={bold ? 700 : 500}
+      fill="hsl(var(--foreground))"
+      stroke="hsl(var(--background))"
+      strokeWidth="3"
+      paintOrder="stroke"
+      strokeLinejoin="round"
+    >
+      {text}
+    </text>
+  );
+
+  const stopDot = ([x, y]: [number, number]) => (
+    <circle cx={x} cy={y} r="5.5" fill="hsl(var(--card))" stroke="hsl(var(--primary))" strokeWidth="3" />
   );
 
   return (
     <div className="relative rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       <svg
-        viewBox="0 0 400 260"
+        viewBox="0 0 400 300"
         className="w-full h-auto block"
         role="img"
-        aria-label="Ilustración: dos rutas sobre Isla de Margarita con autobuses en movimiento"
+        aria-label="Ejemplo: un autobús de la ruta RA-1 se acerca a tu parada en el C.C. Sambil y la app indica en cuántos minutos llega"
       >
-        <rect width="400" height="260" fill="hsl(var(--primary) / 0.07)" />
-        {/* Macanao (oeste) y la isla oriental, unidas por La Restinga */}
+        {/* mar y tierra */}
+        <rect width="400" height="300" fill="hsl(var(--map-sea))" />
         <path
-          d="M55,165 C62,132 108,118 140,134 C162,146 162,178 140,192 C108,210 64,200 55,165 Z"
-          fill="hsl(var(--muted))"
+          d="M18,300 L18,196 C40,150 70,128 108,118 C150,106 172,64 214,40 C262,12 330,10 372,30 C400,44 400,80 400,80 L400,300 Z"
+          fill="hsl(var(--map-land))"
+          stroke="hsl(var(--map-coast))"
+          strokeWidth="2"
         />
-        <path
-          d="M196,152 C206,88 262,56 314,68 C364,80 390,124 372,168 C356,208 300,220 254,208 C222,200 200,182 196,152 Z"
-          fill="hsl(var(--muted))"
-        />
-        <path d="M150,166 C168,170 182,172 200,166" stroke="hsl(var(--muted))" strokeWidth="7" fill="none" strokeLinecap="round" />
+        {/* calles de fondo */}
+        <g stroke="hsl(var(--background))" strokeWidth="2.5" fill="none" opacity="0.7" strokeLinecap="round">
+          <path d="M40,230 L380,214" />
+          <path d="M90,150 L392,150" />
+          <path d="M160,92 L380,96" />
+          <path d="M120,290 L150,120" />
+          <path d="M250,290 L262,40" />
+          <path d="M330,290 L350,36" />
+        </g>
 
-        <path d={ROUTE_WEST} fill="none" stroke="hsl(var(--chart-2))" strokeWidth="4" strokeLinecap="round" strokeDasharray="1 9" />
-        <path d={ROUTE_EAST} fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round" strokeDasharray="1 9" />
+        {/* ruta RA-1 */}
+        <path d={ROUTE} fill="none" stroke="hsl(var(--card))" strokeWidth="11" strokeLinecap="round" />
+        <path ref={routeRef} d={ROUTE} fill="none" stroke="hsl(var(--primary))" strokeWidth="5" strokeLinecap="round" />
+        <path ref={leg1Ref} d={LEG_1} fill="none" stroke="none" />
 
-        {stop(90, 170)}
-        {stop(170, 160)}
-        {stop(235, 185)}
-        {stop(300, 105)}
-        {stop(352, 150)}
+        {stopDot(P_START)}
+        {stopDot(P_END)}
+        {label(P_START[0] + 10, P_START[1] + 20, "Terminal Porlamar")}
+        {label(P_END[0] - 12, P_END[1] - 12, "Playa El Agua", "end")}
 
-        {bus(ROUTE_EAST, "9s", "hsl(var(--primary))", [300, 105])}
-        {bus(ROUTE_WEST, "12s", "hsl(var(--chart-2))", [170, 160])}
+        {/* tu parada */}
+        <circle cx={P_STOP[0]} cy={P_STOP[1]} r="16" fill="hsl(var(--primary) / 0.15)" />
+        <circle cx={P_STOP[0]} cy={P_STOP[1]} r="7" fill="hsl(var(--primary))" stroke="hsl(var(--card))" strokeWidth="3" />
+        {label(P_STOP[0] - 16, P_STOP[1] - 16, "Tu parada · C.C. Sambil", "end", true)}
+
+        {/* autobús */}
+        <g ref={busRef} transform={`translate(${P_START})`}>
+          <rect x="-15" y="-11" width="30" height="22" rx="7" fill="hsl(var(--foreground))" />
+          <text y="4" textAnchor="middle" fontSize="10" fontWeight="700" fill="hsl(var(--background))">
+            RA-1
+          </text>
+        </g>
       </svg>
 
-      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-card/90 backdrop-blur px-3 py-1 text-xs font-medium border border-border">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-60 motion-safe:animate-ping" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-        </span>
-        En vivo
+      <div className="absolute left-3 top-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-medium backdrop-blur">
+        Ejemplo · Ruta RA-1
       </div>
-      <div className="absolute right-3 bottom-3 rounded-lg bg-card/90 backdrop-blur px-3 py-2 text-xs border border-border shadow-sm">
-        <div className="font-semibold">RA-1 · Ruta Norte</div>
-        <div className="text-muted-foreground">Unidad en ruta</div>
+
+      <div
+        className="m-3 mt-0 rounded-xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur sm:absolute sm:bottom-3 sm:right-3 sm:m-0 sm:w-56"
+        aria-live="off"
+      >
+        <div className="text-xs text-muted-foreground">Tu parada · C.C. Sambil</div>
+        <div className="mt-0.5 text-lg font-bold leading-tight">
+          {phase.kind === "approaching" && <>RA-1 llega en {phase.minutes} min</>}
+          {phase.kind === "atStop" && <span className="text-primary">RA-1 está en tu parada</span>}
+          {phase.kind === "passed" && <span className="text-muted-foreground">Ya pasó · próxima en 12 min</span>}
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${Math.round(progress * 100)}%` }} />
+        </div>
       </div>
     </div>
   );
@@ -236,11 +342,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+        <div className={`${WRAP} flex items-center justify-between gap-4 py-3`}>
           <Link href="/" className="flex items-center gap-2.5" aria-label="BusChecker Margarita, inicio">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Bus className="h-5 w-5" />
-            </span>
+            <BrandMark className="h-9 w-9" />
             <span className="font-bold leading-none">
               BusChecker <span className="font-normal text-muted-foreground">Margarita</span>
             </span>
@@ -261,7 +365,7 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="container mx-auto grid items-center gap-10 px-4 py-14 md:py-20 lg:grid-cols-2">
+        <section className={`${WRAP} grid items-center gap-12 py-16 md:py-24 lg:grid-cols-2`}>
           <div>
             <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -293,7 +397,7 @@ export default function LandingPage() {
 
         {/* Cómo funciona */}
         <section id="como-funciona" className="scroll-mt-20 border-t border-border bg-card/40">
-          <div className="container mx-auto px-4 py-16">
+          <div className={`${WRAP} py-20`}>
             <h2 className="text-3xl font-bold tracking-tight">Cómo funciona</h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Tres pasos, desde el autobús hasta tu teléfono.
@@ -317,7 +421,7 @@ export default function LandingPage() {
 
         {/* Perfiles */}
         <section id="perfiles" className="scroll-mt-20">
-          <div className="container mx-auto px-4 py-16">
+          <div className={`${WRAP} py-20`}>
             <h2 className="text-3xl font-bold tracking-tight">Un mismo mapa, tres perfiles</h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Cada perfil ve y puede hacer cosas distintas. Toda cuenta nueva empieza como pasajero.
@@ -350,7 +454,7 @@ export default function LandingPage() {
 
         {/* Rutas */}
         <section id="rutas" className="scroll-mt-20 border-t border-border bg-card/40">
-          <div className="container mx-auto px-4 py-16">
+          <div className={`${WRAP} py-20`}>
             <h2 className="text-3xl font-bold tracking-tight">Rutas de la red</h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Las rutas que cubre BusChecker hoy, de Porlamar a las playas y a La Restinga.
@@ -362,7 +466,7 @@ export default function LandingPage() {
         </section>
 
         {/* Tecnología */}
-        <section className="container mx-auto px-4 py-16">
+        <section className={`${WRAP} py-20`}>
           <h2 className="text-3xl font-bold tracking-tight">Bajo el capó</h2>
           <p className="mt-2 max-w-2xl text-muted-foreground">
             Construido con herramientas abiertas y una base de datos que valida cada escritura.
@@ -379,7 +483,7 @@ export default function LandingPage() {
         </section>
 
         {/* CTA final */}
-        <section className="container mx-auto px-4 pb-16">
+        <section className={`${WRAP} pb-20`}>
           <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-primary px-6 py-10 text-primary-foreground md:flex-row md:items-center md:px-10">
             <div>
               <h2 className="text-2xl font-bold">Mira dónde vienen los autobuses ahora</h2>
@@ -395,7 +499,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border">
-        <div className="container mx-auto flex flex-col gap-2 px-4 py-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <div className={`${WRAP} flex flex-col gap-2 py-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between`}>
           <span>BusChecker Margarita · Mapa © colaboradores de OpenStreetMap</span>
           <span>Proyecto demostrativo: las unidades que ves en el mapa son simuladas.</span>
         </div>
